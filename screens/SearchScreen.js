@@ -12,7 +12,7 @@ import { View, Text, StyleSheet } from 'react-native';
 export default function SearchScreen() {
     return (
         <View style={styles.container}>
-            <Text>this is the search screen</Text>
+            <Text>this is the search screen for now</Text>
         </View>
     );
 }

@@ -10,33 +10,12 @@ import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import HomeScreen from "./screens/HomeScreen";
+import SearchScreen from "./screens/SearchScreen";
+import HistoryScreen from "./screens/HistoryScreen";
+import FavoritesScreen from "./screens/FavoritesScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
-
-function SearchScreen() {
-  return (
-    <View style={styles.screenContainer}>
-      <Text>this is the search screen</Text>
-    </View>
-  );
-}
-
-function FavoritesScreen() {
-  return (
-    <View style={styles.screenContainer}>
-      <Text>Favorites Screen</Text>
-    </View>
-  );
-}
-
-function HistoryScreen() {
-  return (
-    <View style={styles.screenContainer}>
-      <Text>History Screen</Text>
-    </View>
-  );
-}
 
 
 export default function App() {
