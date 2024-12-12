@@ -6,7 +6,7 @@ import { View, Text, StyleSheet } from 'react-native';
 export default function HistoryScreen() {
     return (
         <View style={styles.container}>
-            <Text>Search Screen</Text>
+            <Text>History Screen</Text>
         </View>
     );
 }
