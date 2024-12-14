@@ -136,8 +136,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 12,
-        height: height,
-        paddingBottom: 50,
     },
     profileContainer: {
         flexGrow: 1,
@@ -147,6 +145,7 @@ const styles = StyleSheet.create({
         resizeMode: 'contain',
         width: width * 0.4, // 20% of viewport width
         aspectRatio: 1,
+        marginTop: 10,
     },
     profileName: {
         fontSize: baseFontSize * 2,
