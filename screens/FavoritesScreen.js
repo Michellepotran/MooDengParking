@@ -17,6 +17,7 @@ export default function FavoritesScreen() {
                 />
             </TouchableOpacity>
             <Text>f Screen</Text>
+            <Text>this favorite Screen</Text>
         </View>
     );
 }
