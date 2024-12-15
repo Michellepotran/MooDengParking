@@ -1,11 +1,8 @@
-// import { StatusBar } from 'expo-status-bar';
-// import { StyleSheet, Text, View } from 'react-native';
-
 import React from "react";
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -18,7 +15,7 @@ import ProfileScreen from './screens/ProfileScreen';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-
+// Main tabs for bottom navigation
 function MainTabs() {
   return (
     <Tab.Navigator initialRouteName="Search">
@@ -27,7 +24,7 @@ function MainTabs() {
         component={SearchScreen}
         options={{
           tabBarLabel: 'Search',
-          tabBarIcon: ({ color, size }) => <Entypo name="location" size={24} color="black" />,
+          tabBarIcon: ({ color, size }) => <Entypo name="location" size={size} color={color} />,
         }}
       />
       <Tab.Screen
@@ -35,7 +32,7 @@ function MainTabs() {
         component={FavoritesScreen}
         options={{
           tabBarLabel: 'Favorites',
-          tabBarIcon: ({ color, size }) => <AntDesign name="car" size={24} color="black" />,
+          tabBarIcon: ({ color, size }) => <AntDesign name="car" size={size} color={color} />,
         }}
       />
       <Tab.Screen
@@ -43,7 +40,7 @@ function MainTabs() {
         component={HistoryScreen}
         options={{
           tabBarLabel: 'History',
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="history" size={24} color="black" />,
+          tabBarIcon: ({ color, size }) => <MaterialIcons name="history" size={size} color={color} />,
         }}
       />
     </Tab.Navigator>
@@ -62,6 +59,7 @@ export default function App() {
         <Stack.Screen
           name="ProfileScreen"
           component={ProfileScreen}
+          options={{ title: 'Profile' }} // Optional header title
         />
       </Stack.Navigator>
     </NavigationContainer>
@@ -75,15 +73,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-
-// export default function App() {
-//   return (
-//     <NavigationContainer>
-//       <Stack.Navigator>
-//         <Stack.Screen name="Home" component={HomeScreen} />
-//       </Stack.Navigator>
-//     </NavigationContainer>
-//   );
-// }
-
-
