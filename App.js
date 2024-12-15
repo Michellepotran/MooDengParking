@@ -1,69 +1,57 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import React from "react";
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, Image, Dimensions, Button } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StyleSheet } from 'react-native';
-import Entypo from '@expo/vector-icons/Entypo';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import HomeScreen from "./screens/HomeScreen";
-import SearchScreen from "./screens/SearchScreen";
-import HistoryScreen from "./screens/HistoryScreen";
-import FavoritesScreen from "./screens/FavoritesScreen";
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import ProfileScreen from './screens/ProfileScreen';
+import FavoritesScreen from './screens/FavoritesScreen';
 
 const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
-
-// Main tabs for bottom navigation
-function MainTabs() {
-  return (
-    <Tab.Navigator initialRouteName="Search">
-      <Tab.Screen
-        name="Search"
-        component={SearchScreen}
-        options={{
-          tabBarLabel: 'Search',
-          tabBarIcon: ({ color, size }) => <Entypo name="location" size={size} color={color} />,
-        }}
-      />
-      <Tab.Screen
-        name="Favorites"
-        component={FavoritesScreen}
-        options={{
-          tabBarLabel: 'Favorites',
-          tabBarIcon: ({ color, size }) => <AntDesign name="car" size={size} color={color} />,
-        }}
-      />
-      <Tab.Screen
-        name="History"
-        component={HistoryScreen}
-        options={{
-          tabBarLabel: 'History',
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="history" size={size} color={color} />,
-        }}
-      />
-    </Tab.Navigator>
-  );
-}
+const { width, height } = Dimensions.get('window');
 
 export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalContent, setModalContent] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [location, setLocation] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+
 
   // This is the function to open modal instead of navigating to a new screen 
   const openModal = (content) => {
     setModalContent(content);
     setModalVisible(true);
-    setSearchQuery("");  
+    setSearchQuery("");
   };
 
   // This closes the modal
   const closeModal = () => setModalVisible(false);
+
+  //for location mapping
+  useEffect(() => {
+    const getLocation = async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permission to access location was denied');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location.coords);
+    };
+
+    getLocation();
+  }, []);
+
+  const saveLocation = async () => {
+    if (location) {
+      await AsyncStorage.setItem('parkingLocation', JSON.stringify(location));
+      console.log('Parking spot saved:', location);
+    } else {
+      console.log('Location not available yet.');
+    }
+  };
 
   // Content for the different buttons
   const renderModalContent = () => {
@@ -131,60 +119,94 @@ export default function App() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>This is the Home screen</Text>
-      <Text style={styles.subtitle}>Where the map will be displayed</Text>
-
-      {/* Making the buttons look like a tab navigator at the button of the app */}
-      <View style={styles.buttonWrapper}>
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={() => openModal("Search")}
-        >
-          <Ionicons name="location" size={24} color="#211F27" />
-          <Text style={styles.buttonText}>Search</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={() => openModal("Favorites")}
-        >
-          <Ionicons name="car" size={24} color="#211F27" />
-          <Text style={styles.buttonText}>Favorites</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={() => openModal("History")}
-        >
-          <Ionicons name="time" size={24} color="#211F27" />
-          <Text style={styles.buttonText}>History</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Modal for half-screen overlay */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={closeModal}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContentWithClose}>
-            <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
-              <Ionicons name="chevron-down" size={30} color="#d2d2d2" />
-            </TouchableOpacity>
-
-            {renderModalContent()}
-          </View>
-        </View>
-      </Modal>
-    </View>
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen
-          name="MainTabs"
-          component={MainTabs}
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="Home" options={{ headerShown: false }}>
+          {({ navigation }) => (
+            <View style={styles.container}>
+              {/* This is for the Profile button on top right side */}
+              <View style={styles.profileButtonContainer}>
+                <TouchableOpacity
+                  style={styles.imageContainer}
+                  onPress={() => navigation.navigate('ProfileScreen')}
+                >
+                  <Image
+                    source={require('./assets/profile-icon.png')} // Adjust the path as necessary
+                    style={styles.profileIcon}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* <Text style={styles.title}>This is the Home screen</Text>
+              <Text style={styles.subtitle}>Where the map will be displayed</Text> */}
+
+              {/* MapView to display the user's location */}
+              <MapView
+                style={styles.map}
+                initialRegion={{
+                  latitude: 37.78825, // Default latitude
+                  longitude: -122.4324, // Default longitude
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                }}
+              >
+                {/* Display Marker if the location is available */}
+                {location && (
+                  <Marker coordinate={{ latitude: location.latitude, longitude: location.longitude }} />
+                )}
+              </MapView>
+
+              {/* Button to save the current location */}
+              <Button title="Save Parking Spot" onPress={saveLocation} />
+
+              {/* Error message if location permission is denied */}
+              {errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
+
+              {/* Making the buttons look like a tab navigator at the bottom of the app */}
+              <View style={styles.buttonWrapper}>
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() => openModal('Search')}
+                >
+                  <Ionicons name="location" size={24} color="#211F27" />
+                  <Text style={styles.buttonText}>Search</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() => openModal('Favorites')}
+                >
+                  <Ionicons name="car" size={24} color="#211F27" />
+                  <Text style={styles.buttonText}>Favorites</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() => openModal('History')}
+                >
+                  <Ionicons name="time" size={24} color="#211F27" />
+                  <Text style={styles.buttonText}>History</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Modal for half-screen overlay */}
+              <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={closeModal}
+              >
+                <View style={styles.modalContainer}>
+                  <View style={styles.modalContentWithClose}>
+                    <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
+                      <Ionicons name="chevron-down" size={30} color="#d2d2d2" />
+                    </TouchableOpacity>
+
+                    {renderModalContent()}
+                  </View>
+                </View>
+              </Modal>
+            </View>
+          )}
+        </Stack.Screen>
         <Stack.Screen
           name="ProfileScreen"
           component={ProfileScreen}
@@ -214,7 +236,7 @@ const styles = StyleSheet.create({
   },
   buttonWrapper: {
     flexDirection: 'row',
-    justifyContent: 'space-between', 
+    justifyContent: 'space-between',
     width: '90%',
     borderRadius: 30,
     backgroundColor: '#FFFFFF',
@@ -224,7 +246,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   button: {
-    flex: 1, 
+    flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -232,7 +254,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#211F27',
     fontSize: 16,
-    marginTop: 8, 
+    marginTop: 8,
   },
   modalContainer: {
     flex: 1,
@@ -256,7 +278,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 2,
-    textAlign: 'left', 
+    textAlign: 'left',
   },
   searchInput: {
     height: 40,
@@ -273,9 +295,9 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 5,
-    justifyContent: 'flex-start', 
+    justifyContent: 'flex-start',
     paddingLeft: 10,
-    paddingTop: 10, 
+    paddingTop: 10,
     marginTop: 10,
   },
   resultsText: {
@@ -294,10 +316,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  profileButtonContainer: {
+    position: 'relative',
+    alignItems: 'flex-end',
+    width: width,
+  },
+  imageContainer: {
+    position: 'relative',
+    top: height * 0.10,
+    right: width * 0.05,
+    zIndex: 1,
+  },
+  profileIcon: {
+    width: 50,
+    height: 50,
+  },
+  map: {
+    position: 'absolute',
+    width: width,
+    height: height,
+    marginBottom: 20,
+  },
+  error: {
+    color: 'red',
+    marginBottom: 10,
+  },
 });
-
-
-
-
-
-
