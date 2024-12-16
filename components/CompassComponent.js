@@ -1,4 +1,4 @@
-import { Magnetometer } from 'react-native-sensors';
+import { Magnetometer } from 'expo-sensors';
 
 class CompassComponent 
 {
@@ -14,7 +14,7 @@ class CompassComponent
   {
     const magnetometer = new Magnetometer({ updateInterval: 5000 });
 
-    magnetometer.subscribe(({ x, y, z }) => 
+    magnetometer.addListener(({ x, y, z }) => 
     {
       const now = Date.now();
       if (now - this.lastUpdate > 5000) 
