@@ -1,34 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, Image, Dimensions, Button } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, Image, Dimensions } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import MapView, { Marker } from 'react-native-maps';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import ProfileScreen from './screens/ProfileScreen';
-import FavoritesScreen from './screens/FavoritesScreen';
+import ModalContent from './components/ModalContent';
+import ButtonWrapper from './components/ButtonWrapper';
+import MapViewDirections from 'react-native-maps-directions';
 
-const Stack = createStackNavigator();
 const { width, height } = Dimensions.get('window');
+const Stack = createStackNavigator();
+const GOOGLE_MAPS_APIKEY = 'AIzaSyAVxON3oKT7TZlqbxAfyFcfcZDeVx8NB4s'; // Replace with your Google Maps API key
+
 
 export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalContent, setModalContent] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [errorMsg, setErrorMsg] = useState(null);
+  const [initialRegion, setInitialRegion] = useState({
+    latitude: 51.0447,
+    longitude: -114.0719,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  });
 
-
-  // This is the function to open modal instead of navigating to a new screen 
   const openModal = (content) => {
     setModalContent(content);
     setModalVisible(true);
     setSearchQuery("");
   };
 
-  // This closes the modal
-  const closeModal = () => setModalVisible(false);
+  const closeModal = () => {
+    setModalVisible(false);
+    setModalContent(null);
+  };
 
-  //for location mapping
   useEffect(() => {
     const getLocation = async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -39,10 +51,19 @@ export default function App() {
 
       let location = await Location.getCurrentPositionAsync({});
       setLocation(location.coords);
+      setInitialRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude
+      });
     };
 
     getLocation();
   }, []);
+
+  const handleStartParking = () => {
+    // Add your start parking functionality here
+    console.log('Start parking at:', location);
+  };
 
   const saveLocation = async () => {
     if (location) {
@@ -53,85 +74,19 @@ export default function App() {
     }
   };
 
-  // Content for the different buttons
-  const renderModalContent = () => {
-    switch (modalContent) {
-      case "Search":
-        return (
-          <View style={styles.modalContent}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search here..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            <Text style={styles.modalText}>Search</Text>
-            <View style={styles.resultsContainer}>
-              {searchQuery ? (
-                <Text style={styles.resultsText}>Results for: {searchQuery}</Text>
-              ) : (
-                <Text style={styles.resultsText}>No results yet.</Text>
-              )}
-            </View>
-          </View>
-        );
-      case "Favorites":
-        return (
-          <View style={styles.modalContent}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search favorites..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            <Text style={styles.modalText}>Favorites</Text>
-            <View style={styles.resultsContainer}>
-              {searchQuery ? (
-                <Text style={styles.resultsText}>Results for: {searchQuery}</Text>
-              ) : (
-                <Text style={styles.resultsText}>No results yet.</Text>
-              )}
-            </View>
-          </View>
-        );
-      case "History":
-        return (
-          <View style={styles.modalContent}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search history..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            <Text style={styles.modalText}>History</Text>
-            <View style={styles.resultsContainer}>
-              {searchQuery ? (
-                <Text style={styles.resultsText}>Results for: {searchQuery}</Text>
-              ) : (
-                <Text style={styles.resultsText}>No results yet.</Text>
-              )}
-            </View>
-          </View>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
     <NavigationContainer>
       <Stack.Navigator>
         <Stack.Screen name="Home" options={{ headerShown: false }}>
           {({ navigation }) => (
             <View style={styles.container}>
-              {/* This is for the Profile button on top right side */}
               <View style={styles.profileButtonContainer}>
                 <TouchableOpacity
                   style={styles.imageContainer}
                   onPress={() => navigation.navigate('ProfileScreen')}
                 >
                   <Image
-                    source={require('./assets/profile-icon.png')} // Adjust the path as necessary
+                    source={require('./assets/profile-icon.png')}
                     style={styles.profileIcon}
                   />
                 </TouchableOpacity>
@@ -140,54 +95,39 @@ export default function App() {
               {/* <Text style={styles.title}>This is the Home screen</Text>
               <Text style={styles.subtitle}>Where the map will be displayed</Text> */}
 
-              {/* MapView to display the user's location */}
               <MapView
                 style={styles.map}
-                initialRegion={{
-                  latitude: 37.78825, // Default latitude
-                  longitude: -122.4324, // Default longitude
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }}
+                // need a way to set current location
+                initialRegion={initialRegion}
               >
-                {/* Display Marker if the location is available */}
                 {location && (
                   <Marker coordinate={{ latitude: location.latitude, longitude: location.longitude }} />
                 )}
+                {selectedLocation && (
+                  <Marker coordinate={{ latitude: selectedLocation.latitude, longitude: selectedLocation.longitude }} />
+                )}
+                {location && selectedLocation && (
+                  <MapViewDirections
+                    origin={{ latitude: location.latitude, longitude: location.longitude }}
+                    destination={{ latitude: selectedLocation.latitude, longitude: selectedLocation.longitude }}
+                    apikey={GOOGLE_MAPS_APIKEY}
+                    strokeWidth={3}
+                    strokeColor="hotpink"
+                    onReady={result => {
+                      console.log(`Distance: ${result.distance} km`);
+                      console.log(`Duration: ${result.duration} min.`);
+                    }}
+                  />
+                )}
               </MapView>
 
-              {/* Button to save the current location */}
-              <Button title="Save Parking Spot" onPress={saveLocation} />
+              <TouchableOpacity style={styles.startParkingButton} onPress={handleStartParking}>
+                <Text style={styles.startParkingButtonText}>Start Parking</Text>
+              </TouchableOpacity>
 
-              {/* Error message if location permission is denied */}
-              {errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
+              <ButtonWrapper openModal={openModal} />
 
-              {/* Making the buttons look like a tab navigator at the bottom of the app */}
-              <View style={styles.buttonWrapper}>
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={() => openModal('Search')}
-                >
-                  <Ionicons name="location" size={24} color="#211F27" />
-                  <Text style={styles.buttonText}>Search</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={() => openModal('Favorites')}
-                >
-                  <Ionicons name="car" size={24} color="#211F27" />
-                  <Text style={styles.buttonText}>Favorites</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={() => openModal('History')}
-                >
-                  <Ionicons name="time" size={24} color="#211F27" />
-                  <Text style={styles.buttonText}>History</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Modal for half-screen overlay */}
+                {/* Modal for half-screen overlay */}
               <Modal
                 animationType="slide"
                 transparent={true}
@@ -200,7 +140,8 @@ export default function App() {
                       <Ionicons name="chevron-down" size={30} color="#d2d2d2" />
                     </TouchableOpacity>
 
-                    {renderModalContent()}
+                    <ModalContent modalContent={modalContent} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedLocation={setSelectedLocation}
+                      closeModal={closeModal} />
                   </View>
                 </View>
               </Modal>
@@ -210,7 +151,7 @@ export default function App() {
         <Stack.Screen
           name="ProfileScreen"
           component={ProfileScreen}
-          options={{ title: 'Profile' }} // Optional header title
+          options={{ title: 'Profile' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
@@ -224,97 +165,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
     paddingBottom: 30,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 50,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  buttonWrapper: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '90%',
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CCCCCC',
-    padding: 5,
-    marginTop: 20,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#211F27',
-    fontSize: 16,
-    marginTop: 8,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContentWithClose: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-    position: 'relative',
-    paddingTop: 40,
-  },
-  modalText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 2,
-    textAlign: 'left',
-  },
-  searchInput: {
-    height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 10,
-    marginTop: 5,
-    paddingHorizontal: 10,
-  },
-  resultsContainer: {
-    width: '100%',
-    height: 150,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    justifyContent: 'flex-start',
-    paddingLeft: 10,
-    paddingTop: 10,
-    marginTop: 10,
-  },
-  resultsText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 10,
-    left: '55%',
-    transform: [{ translateX: -15 }],
-    backgroundColor: '#FFFF',
-    borderRadius: 50,
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   profileButtonContainer: {
     position: 'relative',
@@ -340,5 +190,61 @@ const styles = StyleSheet.create({
   error: {
     color: 'red',
     marginBottom: 10,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)'
+  },
+  modalContentWithClose: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    position: 'relative',
+    paddingTop: 40,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    left: '55%',
+    transform: [{ translateX: -15 }],
+    backgroundColor: '#FFFF',
+    borderRadius: 50,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  startParkingButton: {
+    position: 'absolute',
+    bottom: '15%', // Adjust the position as needed
+    left: width / 2 - 75, // Adjust the position as needed
+    backgroundColor: '#A8D5BA',
+    padding: 15,
+    borderRadius: 10,
+  },
+  startParkingButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
