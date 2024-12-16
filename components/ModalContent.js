@@ -1,16 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
-import { getParkingHistory } from '../api/apiParking';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { getParkingHistory, createParkingHistory} from '../api/apiParking';
 import { getFavorites, deleteFavorite } from '../api/apiFavorites';
 import Svg, { Ellipse, Path } from 'react-native-svg';
 import { GOOGLE_MAPS_API_KEY } from '@env';
 import axios from 'axios';
+import { GOOGLE_MAPS_API_KEY } from '@env';
+import axios from 'axios';
 
 
-const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLocation, closeModal, handleBookParking, handleEndParking }) => {
+const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLocation, closeModal, handleBookParking, handleEndParking, handleCloseParkingPress }) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
+    const [selectedLatitude, setSelectedLatitude] = useState(null);
+    const [selectedLongitude, setSelectedLongitude] = useState(null);
+    const [selectedLocationName, setSelectedLocationName] = useState('');
+    const [timerVisible, setTimerVisible] = useState(false);
+    const [totalAmountModalVisible, setTotalAmountModalVisible] = useState(false);
+    const [totalAmount, setTotalAmount] = useState(0);
+    const [startTime, setStartTime] = useState(null);
+    const [endTime, setEndTime] = useState(null);
+    const parkingPrice = 120;
+    const [timer, setTimer] = useState(120);
 
     useEffect(() => {
         if (modalContent === "History" || modalContent === "Favorites") {
@@ -49,11 +61,17 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
 
     const handleSelectLocation = (location) => {
         console.log('location:', location);
+        console.log('location:', location);
         if (location && location.latitude && location.longitude) {
             setSelectedLocation({
                 latitude: location.latitude,
                 longitude: location.longitude
             });
+
+            setSelectedLatitude(location.latitude);
+            setSelectedLongitude(location.longitude);
+            setSelectedLocationName(location.locationName);
+            console.log('saved values: ',selectedLatitude,selectedLocationName,selectedLongitude)
             closeModal(); // Close the modal
         }
     };
@@ -72,11 +90,11 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
                     'Content-Type': 'application/json', 'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY
                 }
             });
+            const suggestions = response.data.suggestions.map(suggestion => { 
+                const { placeId } = suggestion.placePrediction; 
+                const description = `${suggestion.placePrediction.structuredFormat.mainText.text}`; 
+                return { placeId, description }; });
 
-            const suggestions = response.data.suggestions.map(suggestion => { const { placeId } = suggestion.placePrediction; const description = `${suggestion.placePrediction.structuredFormat.mainText.text}, ${suggestion.placePrediction.structuredFormat.secondaryText.text}`; return { placeId, description }; });
-            console.log('response:', suggestions);
-            console.log('placeid:', suggestions[0].placeId);
-            console.log('description:', suggestions[0].description);
             setSuggestions(suggestions);
         } catch (error) {
             console.error('Error fetching suggestions:', error);
@@ -102,6 +120,49 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
         }
     };
 
+    const handleBookParkingPress = () => {
+        handleBookParking();
+        setTimerVisible(true);
+    };
+
+    const handleEndParkingPress = () => {
+        const startTime = new Date().getTime();
+        const endTime = startTime + (timer * 120000); // Convert minutes to milliseconds
+        setEndTime(endTime);
+        setTimerVisible(false);
+
+
+        // Calculate the total amount based on the duration
+        const durationInHours = (endTime - startTime) / (1000 * 60 * 60); // Convert milliseconds to hours
+        const amount = durationInHours * parkingPrice;
+        setTotalAmount(amount);
+        setTotalAmountModalVisible(true);
+        // Save to database (example)
+        saveParkingDataToDatabase(startTime,endTime,amount);
+        handleEndParking();
+    };
+
+    const saveParkingDataToDatabase = async (startTime,endTime, amount) => {
+        try {
+            const createdAt = new Date().toISOString();
+
+            const task = {
+                createdAt,
+                locationName: selectedLocationName,
+                latitude: selectedLatitude,
+                longitude: selectedLongitude,
+                amount,
+                startTime: new Date(startTime).toISOString(),
+                endTime: new Date(endTime).toISOString(),
+            };
+            await createParkingHistory(task);
+
+            console.log('Parking data saved successfully');
+        } catch (error) {
+            console.error('Error saving parking data:', error);
+        }
+    };
+
     const filteredData = data.filter(item =>
         item.locationName.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -123,8 +184,19 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
                                 setSearchQuery(text);
                                 fetchSuggestions(text);
                             }}
+                            onChangeText={(text) => {
+                                setSearchQuery(text);
+                                fetchSuggestions(text);
+                            }}
                         />
                         <Text style={styles.modalText}>Search</Text>
+                        <ScrollView style={styles.resultsContainer} contentContainerStyle={styles.scrollContent}>
+                            {suggestions.map((suggestion) => (
+                                <TouchableOpacity key={suggestion.placeId} style={styles.suggestionItem} onPress={() => handleSuggestionPress(suggestion)}>
+                                    <Text style={styles.suggestionText}>{suggestion.description}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
                         <ScrollView style={styles.resultsContainer} contentContainerStyle={styles.scrollContent}>
                             {suggestions.map((suggestion) => (
                                 <TouchableOpacity key={suggestion.placeId} style={styles.suggestionItem} onPress={() => handleSuggestionPress(suggestion)}>
@@ -199,8 +271,13 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
             case "BookParking":
                 return (
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalText}>Book Parking</Text>
-                        <TouchableOpacity style={styles.bookParkingButton} onPress={handleBookParking}>
+                        <Text style={styles.modalText}>Book your car Parking</Text>
+                        <View style={styles.parkingDetailsContainer}>
+                            <Text style={styles.resultsText}>Location: A - 013</Text>
+                            <Text style={styles.resultsText}>Time Slot: 10:00 PM - 12:12 AM</Text>
+                            <Text style={styles.resultsText}>Price: ${parkingPrice}</Text>
+                        </View>
+                        <TouchableOpacity style={styles.bookParkingButton} onPress={handleBookParkingPress}>
                             <Text style={styles.bookParkingButtonText}>Book Parking</Text>
                         </TouchableOpacity>
                     </View>
@@ -209,9 +286,20 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
                 return (
                     <View style={styles.modalContent}>
                         <Text style={styles.modalText}>Parking Timer</Text>
-                        <Text style={styles.timerText}>00:00:00</Text> {/* Replace with actual timer */}
-                        <TouchableOpacity style={styles.endParkingButton} onPress={handleEndParking}>
+                        <Text style={styles.timerText}>{new Date(timer * 1000).toISOString().substr(11, 8)}</Text> 
+                        <TouchableOpacity style={styles.endParkingButton} onPress={handleEndParkingPress}>
                             <Text style={styles.endParkingButtonText}>End Parking</Text>
+                        </TouchableOpacity>
+                    </View>
+                );
+            case "CloseParking":
+                return (
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalText}>Price: {totalAmount} </Text>
+                        <Text style={styles.timerText}>{new Date(timer * 1000).toISOString().substr(11, 8)}</Text> 
+                        <Image source={require('../assets/car.png')} style={{ width: 200, height: 200, alignSelf: "center" }} />
+                        <TouchableOpacity style={styles.endParkingButton} onPress={handleCloseParkingPress}>
+                            <Text style={styles.endParkingButtonText}>Close</Text>
                         </TouchableOpacity>
                     </View>
                 );
@@ -278,7 +366,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
     },
     bookParkingButton: {
-        backgroundColor: '#ff6347',
+        backgroundColor: '#3A506B',
         padding: 15,
         borderRadius: 10,
         marginTop: 20,
@@ -296,7 +384,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     endParkingButton: {
-        backgroundColor: '#ff6347',
+        backgroundColor: '#3A506B',
         padding: 15,
         borderRadius: 10,
         marginTop: 20,
@@ -306,7 +394,17 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         textAlign: 'center',
-    }
+    },
+    parkingDetailsContainer: {
+        flexDirection: 'column',
+        justifyContent: 'flex-start', // Use a valid value for justifyContent
+        borderColor: 'gray',
+        width: '100%',
+        borderWidth: 1,
+        borderRadius: 20,
+        padding: 10,
+        marginBottom: 40, // Add margin to create space between elements
+    },
 });
 
 export default ModalContent;
