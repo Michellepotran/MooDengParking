@@ -5,6 +5,8 @@ import { getFavorites, deleteFavorite } from '../api/apiFavorites';
 import Svg, { Ellipse, Path } from 'react-native-svg';
 import { GOOGLE_MAPS_API_KEY } from '@env';
 import axios from 'axios';
+import { GOOGLE_MAPS_API_KEY } from '@env';
+import axios from 'axios';
 
 
 const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLocation, closeModal, handleBookParking, handleEndParking, handleCloseParkingPress }) => {
@@ -58,6 +60,7 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
     };
 
     const handleSelectLocation = (location) => {
+        console.log('location:', location);
         console.log('location:', location);
         if (location && location.latitude && location.longitude) {
             setSelectedLocation({
@@ -181,8 +184,19 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
                                 setSearchQuery(text);
                                 fetchSuggestions(text);
                             }}
+                            onChangeText={(text) => {
+                                setSearchQuery(text);
+                                fetchSuggestions(text);
+                            }}
                         />
                         <Text style={styles.modalText}>Search</Text>
+                        <ScrollView style={styles.resultsContainer} contentContainerStyle={styles.scrollContent}>
+                            {suggestions.map((suggestion) => (
+                                <TouchableOpacity key={suggestion.placeId} style={styles.suggestionItem} onPress={() => handleSuggestionPress(suggestion)}>
+                                    <Text style={styles.suggestionText}>{suggestion.description}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
                         <ScrollView style={styles.resultsContainer} contentContainerStyle={styles.scrollContent}>
                             {suggestions.map((suggestion) => (
                                 <TouchableOpacity key={suggestion.placeId} style={styles.suggestionItem} onPress={() => handleSuggestionPress(suggestion)}>
