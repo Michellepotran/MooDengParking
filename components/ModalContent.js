@@ -3,11 +3,14 @@ import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView, Touch
 import { getParkingHistory } from '../api/apiParking';
 import { getFavorites, deleteFavorite } from '../api/apiFavorites';
 import Svg, { Ellipse, Path } from 'react-native-svg';
+import { GOOGLE_MAPS_API_KEY } from '@env';
+import axios from 'axios';
 
 
 const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLocation, closeModal, handleBookParking, handleEndParking }) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [suggestions, setSuggestions] = useState([]);
 
     useEffect(() => {
         if (modalContent === "History" || modalContent === "Favorites") {
@@ -45,12 +48,57 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
     };
 
     const handleSelectLocation = (location) => {
+        console.log('location:', location);
         if (location && location.latitude && location.longitude) {
             setSelectedLocation({
                 latitude: location.latitude,
                 longitude: location.longitude
             });
             closeModal(); // Close the modal
+        }
+    };
+
+    const fetchSuggestions = async (query) => {
+        if (!query) {
+            setSuggestions([]);
+            return;
+        }
+
+        try {
+            const data = { input: query }
+
+            const response = await axios.post(`https://places.googleapis.com/v1/places:autocomplete`, data, {
+                headers: {
+                    'Content-Type': 'application/json', 'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY
+                }
+            });
+
+            const suggestions = response.data.suggestions.map(suggestion => { const { placeId } = suggestion.placePrediction; const description = `${suggestion.placePrediction.structuredFormat.mainText.text}, ${suggestion.placePrediction.structuredFormat.secondaryText.text}`; return { placeId, description }; });
+            console.log('response:', suggestions);
+            console.log('placeid:', suggestions[0].placeId);
+            console.log('description:', suggestions[0].description);
+            setSuggestions(suggestions);
+        } catch (error) {
+            console.error('Error fetching suggestions:', error);
+        }
+    };
+
+    const handleSuggestionPress = async (suggestion) => {
+        try {
+            const placeId = suggestion.placeId;
+            const url = `https://places.googleapis.com/v1/places/${placeId}`
+
+            const response = await axios.get(url, {
+                headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY },
+                params: {
+                    fields: 'location',
+                }
+            });
+            const location = response.data.location;
+            console.log('location:', location.latitude, location.longitude);
+            handleSelectLocation(location);
+        } catch (error) {
+            console.error('Error fetching place details:', error);
         }
     };
 
@@ -71,16 +119,19 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
                             style={styles.searchInput}
                             placeholder="Search here..."
                             value={searchQuery}
-                            onChangeText={setSearchQuery}
+                            onChangeText={(text) => {
+                                setSearchQuery(text);
+                                fetchSuggestions(text);
+                            }}
                         />
                         <Text style={styles.modalText}>Search</Text>
-                        <View style={styles.resultsContainer}>
-                            {searchQuery ? (
-                                <Text style={styles.resultsText}>Results for: {searchQuery}</Text>
-                            ) : (
-                                <Text style={styles.resultsText}>No results yet.</Text>
-                            )}
-                        </View>
+                        <ScrollView style={styles.resultsContainer} contentContainerStyle={styles.scrollContent}>
+                            {suggestions.map((suggestion) => (
+                                <TouchableOpacity key={suggestion.placeId} style={styles.suggestionItem} onPress={() => handleSuggestionPress(suggestion)}>
+                                    <Text style={styles.suggestionText}>{suggestion.description}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
                     </View>
                 );
             case "Favorites":
