@@ -23,6 +23,7 @@ export const deleteParkingHistory = async (id) => {
     throw error;
   }
 };
+
 export const createParkingHistory = async (newtask) => {
   try {
     const response = await api.post("/parkinghistory", newtask);
@@ -32,6 +33,7 @@ export const createParkingHistory = async (newtask) => {
     throw error;
   }
 };
+
 export const updateParkingHistory = async (id, updatefield) => {
   try {
     const response = await api.put(`/parkinghistory/${id}`, updatefield);

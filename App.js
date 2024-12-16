@@ -38,7 +38,6 @@ export default function App() {
 
   const closeModal = () => {
     setModalVisible(false);
-    setModalContent(null);
   };
 
   useEffect(() => {
@@ -66,12 +65,21 @@ export default function App() {
     openModal('BookParking');
   };
 
+  const handleCloseParkingPress = () => {
+    // Add your end parking functionality here
+    console.log('End parking at:', location);
+    closeModal();
+  }
+
   const handleBookParking = () => {
-    setModalContent('Timer');
+    closeModal();
+    console.log('Start Timer', location);
+    openModal('Timer');
   };
 
   const handleEndParking = () => {
     closeModal();
+    openModal('CloseParking');
   };
 
   const saveLocation = async () => {
@@ -150,8 +158,15 @@ export default function App() {
                       <Ionicons name="chevron-down" size={30} color="#d2d2d2" />
                     </TouchableOpacity>
 
-                    <ModalContent modalContent={modalContent} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedLocation={setSelectedLocation}
-                      closeModal={closeModal} />
+                    <ModalContent 
+                      modalContent={modalContent} 
+                      searchQuery={searchQuery} 
+                      setSearchQuery={setSearchQuery} 
+                      setSelectedLocation={setSelectedLocation}
+                      closeModal={closeModal} 
+                      handleBookParking={handleBookParking} 
+                      handleEndParking={handleEndParking} 
+                      handleCloseParkingPress={handleCloseParkingPress} />
                   </View>
                 </View>
               </Modal>
