@@ -10,10 +10,10 @@ import ProfileScreen from './screens/ProfileScreen';
 import ModalContent from './components/ModalContent';
 import ButtonWrapper from './components/ButtonWrapper';
 import MapViewDirections from 'react-native-maps-directions';
+import { GOOGLE_MAPS_API_KEY } from '@env';
 
 const { width, height } = Dimensions.get('window');
 const Stack = createStackNavigator();
-const GOOGLE_MAPS_APIKEY = 'AIzaSyAVxON3oKT7TZlqbxAfyFcfcZDeVx8NB4s'; // Replace with your Google Maps API key
 
 
 export default function App() {
@@ -60,9 +60,18 @@ export default function App() {
     getLocation();
   }, []);
 
-  const handleStartParking = () => {
+  const handleStartParking = (content) => {
     // Add your start parking functionality here
     console.log('Start parking at:', location);
+    openModal('BookParking');
+  };
+
+  const handleBookParking = () => {
+    setModalContent('Timer');
+  };
+
+  const handleEndParking = () => {
+    closeModal();
   };
 
   const saveLocation = async () => {
@@ -109,11 +118,12 @@ export default function App() {
                 {location && selectedLocation && (
                   <MapViewDirections
                     origin={{ latitude: location.latitude, longitude: location.longitude }}
-                    destination={{ latitude: selectedLocation.latitude, longitude: selectedLocation.longitude }}
-                    apikey={GOOGLE_MAPS_APIKEY}
+                    destination={{ latitude: Number(selectedLocation.latitude), longitude: Number(selectedLocation.longitude)}}                    
+                    apikey={GOOGLE_MAPS_API_KEY}
                     strokeWidth={3}
                     strokeColor="hotpink"
                     onReady={result => {
+                      console.log('Destination:', { latitude: selectedLocation.latitude, longitude: selectedLocation.longitude });
                       console.log(`Distance: ${result.distance} km`);
                       console.log(`Duration: ${result.duration} min.`);
                     }}

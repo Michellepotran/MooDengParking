@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { getParkingHistory } from '../api/apiParking';
-import { getFavorites, deleteFavorites } from '../api/apiFavorites';
+import { getFavorites, deleteFavorite } from '../api/apiFavorites';
 import Svg, { Ellipse, Path } from 'react-native-svg';
 
-const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLocation, closeModal }) => {
+
+const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLocation, closeModal, handleBookParking, handleEndParking }) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -36,7 +37,7 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
 
     const handleDeleteFavorite = async (id) => {
         try {
-            await deleteFavorites(id);
+            await deleteFavorite(id);
             fetchData("Favorites");
         } catch (error) {
             console.error('Error deleting favorite:', error);
@@ -47,7 +48,7 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
         if (location && location.latitude && location.longitude) {
             setSelectedLocation({
                 latitude: location.latitude,
-                longitude: location.longitude,
+                longitude: location.longitude
             });
             closeModal(); // Close the modal
         }
