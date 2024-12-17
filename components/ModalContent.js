@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { getParkingHistory, createParkingHistory } from '../api/apiParking';
-import { getFavorites, deleteFavorite } from '../api/apiFavorites';
+import { getFavorites, deleteFavorites } from '../api/apiFavorites';
 import Svg, { Ellipse, Path } from 'react-native-svg';
 import { GOOGLE_MAPS_API_KEY } from '@env';
 import axios from 'axios';
@@ -50,7 +50,7 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
 
     const handleDeleteFavorite = async (id) => {
         try {
-            await deleteFavorite(id);
+            await deleteFavorites(id);
             fetchData("Favorites");
         } catch (error) {
             console.error('Error deleting favorite:', error);
@@ -360,6 +360,7 @@ const styles = StyleSheet.create({
         minHeight: 200,
         flexGrow: 1,
         scrollable: true,
+        flexWrap: 'wrap',
     },
     scrollContent: {
         paddingBottom: 20,
@@ -370,6 +371,7 @@ const styles = StyleSheet.create({
     },
     resultsText: {
         fontSize: 16,
+        flexWrap: 'wrap',
         color: '#666',
         alignItems: 'center',
     },
