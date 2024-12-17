@@ -11,12 +11,17 @@ import ModalContent from './components/ModalContent';
 import ButtonWrapper from './components/ButtonWrapper';
 import MapViewDirections from 'react-native-maps-directions';
 import { GOOGLE_MAPS_API_KEY } from '@env';
+import GPSComponent from './components/GPSComponent.js';
+import MotionComponent from './components/MotionComponent.js';
+import CompassComponent from './components/CompassComponent.js';
 
 const { width, height } = Dimensions.get('window');
 const Stack = createStackNavigator();
 
 
 export default function App() {
+  const [isMoving, setIsMoving] = useState(false);
+  const [heading, setHeading] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalContent, setModalContent] = useState(null);
   const [location, setLocation] = useState(null);
@@ -29,6 +34,8 @@ export default function App() {
     latitudeDelta: 0.01,
     longitudeDelta: 0.01,
   });
+  const [directionsCalculated, setDirectionsCalculated] = useState(false);
+
 
   const openModal = (content) => {
     setModalContent(content);
@@ -41,6 +48,15 @@ export default function App() {
   };
 
   useEffect(() => {
+    const gps = new GPSComponent();
+    const motion = new MotionComponent(setIsMoving);
+    const compass = new CompassComponent(setHeading);
+
+    gps.startTracking(setLocation);
+    motion.startListening();
+    compass.startListening();
+
+
     const getLocation = async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -50,13 +66,15 @@ export default function App() {
 
       let location = await Location.getCurrentPositionAsync({});
       setLocation(location.coords);
+      console.log('Location:', location.coords);
       setInitialRegion({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude
+        latitude: Number(location.coords.latitude),
+        longitude: Number(location.coords.longitude)
       });
     };
 
     getLocation();
+
   }, []);
 
   const handleStartParking = (content) => {
@@ -118,22 +136,23 @@ export default function App() {
                 initialRegion={initialRegion}
               >
                 {location && (
-                  <Marker coordinate={{ latitude: location.latitude, longitude: location.longitude }} />
+                  <Marker coordinate={{ latitude: Number(location.latitude), longitude: Number(location.longitude) }} />
                 )}
                 {selectedLocation && (
-                  <Marker coordinate={{ latitude: selectedLocation.latitude, longitude: selectedLocation.longitude }} />
+                  <Marker coordinate={{ latitude: Number(selectedLocation.latitude), longitude: Number(selectedLocation.longitude) }} />
                 )}
                 {location && selectedLocation && (
                   <MapViewDirections
-                    origin={{ latitude: location.latitude, longitude: location.longitude }}
+                    origin={{ latitude: Number(location.latitude), longitude: Number(location.longitude) }}
                     destination={{ latitude: Number(selectedLocation.latitude), longitude: Number(selectedLocation.longitude)}}                    
                     apikey={GOOGLE_MAPS_API_KEY}
                     strokeWidth={3}
                     strokeColor="hotpink"
                     onReady={result => {
-                      console.log('Destination:', { latitude: selectedLocation.latitude, longitude: selectedLocation.longitude });
+                      console.log('Destination:', { latitude: Number(selectedLocation.latitude), longitude: Number(selectedLocation.longitude) });
                       console.log(`Distance: ${result.distance} km`);
                       console.log(`Duration: ${result.duration} min.`);
+                      setDirectionsCalculated(true); 
                     }}
                   />
                 )}
@@ -170,6 +189,7 @@ export default function App() {
                   </View>
                 </View>
               </Modal>
+              
             </View>
           )}
         </Stack.Screen>

@@ -58,6 +58,8 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
     };
 
     const handleSelectLocation = (location) => {
+        console.log('Selected after press:', location); 
+        
         if (location && location.latitude && location.longitude) {
             setSelectedLocation({
                 latitude: location.latitude,

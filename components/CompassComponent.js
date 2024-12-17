@@ -1,27 +1,21 @@
-import { Magnetometer } from 'react-native-sensors';
-
-class CompassComponent 
-{
-  constructor(headingHandler) 
-  {
+import { Magnetometer } from 'expo-sensors';
+ 
+class CompassComponent {
+  constructor(headingHandler) {
     this.lastHeading = null;
     this.lastUpdate = Date.now();
-
+ 
     this.startListening(headingHandler);
   }
-
-  startListening(headingHandler) 
-  {
-    const magnetometer = new Magnetometer({ updateInterval: 5000 });
-
-    magnetometer.subscribe(({ x, y, z }) => 
-    {
+ 
+  startListening(headingHandler) {
+    Magnetometer.setUpdateInterval(1000);
+ 
+    this.magnetometerSubscription = Magnetometer.addListener(({ x, y, z }) => {
       const now = Date.now();
-      if (now - this.lastUpdate > 5000) 
-      {
+      if (now - this.lastUpdate > 1000) {
         const heading = Math.atan2(y, x) * (180 / Math.PI);
-        if (this.lastHeading === null || Math.abs(heading - this.lastHeading) > 5) 
-        {
+        if (this.lastHeading === null || Math.abs(heading - this.lastHeading) > 5) {
           headingHandler(heading);
           this.lastHeading = heading;
         }
@@ -29,6 +23,12 @@ class CompassComponent
       }
     });
   }
+ 
+  stopListening() {
+    if (this.magnetometerSubscription) {
+      this.magnetometerSubscription.remove();
+    }
+  }
 }
-
+ 
 export default CompassComponent;
