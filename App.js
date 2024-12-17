@@ -11,9 +11,6 @@ import ModalContent from './components/ModalContent';
 import ButtonWrapper from './components/ButtonWrapper';
 import MapViewDirections from 'react-native-maps-directions';
 import { GOOGLE_MAPS_API_KEY } from '@env';
-import GPSComponent from './components/GPSComponent.js';
-import MotionComponent from './components/MotionComponent.js';
-import CompassComponent from './components/CompassComponent.js;
 
 const { width, height } = Dimensions.get('window');
 const Stack = createStackNavigator();
@@ -25,8 +22,6 @@ export default function App() {
   const [location, setLocation] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isMoving, setIsMoving] = useState(false);
-  const [heading, setHeading] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [initialRegion, setInitialRegion] = useState({
     latitude: 51.0447,
@@ -47,14 +42,6 @@ export default function App() {
   };
 
   useEffect(() => {
-    const gps = new GPSComponent();
-    const motion = new MotionComponent(setIsMoving);
-    const compass = new CompassComponent(setHeading);
-
-    gps.startTracking(setLocation);
-    motion.startListening(setIsMoving);
-    compass.startListening(setHeading);
-    
     const getLocation = async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {

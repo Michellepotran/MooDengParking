@@ -1,4 +1,4 @@
-import { Accelerometer, Gyroscope } from 'expo-sensors';
+import { Accelerometer, Gyroscope } from 'react-native-sensors';
 
 class MotionComponent
 {
@@ -16,7 +16,7 @@ class MotionComponent
     const accelerometer = new Accelerometer({ updateInterval: 5000 });
     const gyroscope = new Gyroscope({ updateInterval: 5000 });
 
-    accelerometer.addListener(({ x, y, z }) =>
+    accelerometer.subscribe(({ x, y, z }) =>
     {
       const now = Date.now();
       if (now - this.lastUpdate > 5000)
@@ -27,7 +27,7 @@ class MotionComponent
         }
     });
 
-    gyroscope.addListener(({ x, y, z }) => 
+    gyroscope.subscribe(({ x, y, z }) => 
     {
       this.rotationRate = { x, y, z };
     });
