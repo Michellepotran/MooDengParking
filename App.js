@@ -43,6 +43,7 @@ export default function App() {
 
   const closeModal = () => {
     setModalVisible(false);
+    setModalContent(null);
   };
 
   useEffect(() => {
