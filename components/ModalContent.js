@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { getParkingHistory, createParkingHistory } from '../api/apiParking';
+import { getParkingHistory, createParkingHistory} from '../api/apiParking';
 import { getFavorites, deleteFavorite } from '../api/apiFavorites';
 import Svg, { Ellipse, Path } from 'react-native-svg';
+import { GOOGLE_MAPS_API_KEY } from '@env';
+import axios from 'axios';
 import { GOOGLE_MAPS_API_KEY } from '@env';
 import axios from 'axios';
 
@@ -58,23 +60,18 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
     };
 
     const handleSelectLocation = (location) => {
+        console.log('location:', location);
+        console.log('location:', location);
         if (location && location.latitude && location.longitude) {
             setSelectedLocation({
                 latitude: location.latitude,
-                longitude: location.longitude,
-                name: location.locationName,
+                longitude: location.longitude
             });
 
             setSelectedLatitude(location.latitude);
             setSelectedLongitude(location.longitude);
             setSelectedLocationName(location.locationName);
-
-            console.log('Selected Location:', location); 
-            console.log('State after setting location:', {
-                selectedLatitude: location.latitude,
-                selectedLongitude: location.longitude,
-                selectedLocationName: location.locationName,
-            }); // Debugging statement
+            console.log('saved values: ',selectedLatitude,selectedLocationName,selectedLongitude)
             closeModal(); // Close the modal
         }
     };
@@ -93,11 +90,10 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
                     'Content-Type': 'application/json', 'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY
                 }
             });
-            const suggestions = response.data.suggestions.map(suggestion => {
-                const { placeId } = suggestion.placePrediction;
-                const description = `${suggestion.placePrediction.structuredFormat.mainText.text}`;
-                return { placeId, description };
-            });
+            const suggestions = response.data.suggestions.map(suggestion => { 
+                const { placeId } = suggestion.placePrediction; 
+                const description = `${suggestion.placePrediction.structuredFormat.mainText.text}`; 
+                return { placeId, description }; });
 
             setSuggestions(suggestions);
         } catch (error) {
@@ -125,13 +121,6 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
     };
 
     const handleBookParkingPress = () => {
-        console.log('State before booking parking:', {
-            selectedLatitude,
-            selectedLongitude,
-            selectedLocationName,
-        }); // Debugging statement
-
-        
         handleBookParking();
         setTimerVisible(true);
     };
@@ -148,38 +137,24 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
         const amount = durationInHours * parkingPrice;
         setTotalAmount(amount);
         setTotalAmountModalVisible(true);
-
-
-        // Save to database
-        const location = {
-            locationName: selectedLocationName,
-            latitude: selectedLatitude,
-            longitude: selectedLongitude,
-        };
-        console.log('Location before saving:', location); // Debugging statement
-
         // Save to database (example)
-        saveParkingDataToDatabase(startTime, endTime, amount, location);
+        saveParkingDataToDatabase(startTime,endTime,amount);
         handleEndParking();
     };
 
-    const saveParkingDataToDatabase = async (startTime, endTime, amount, location) => {
+    const saveParkingDataToDatabase = async (startTime,endTime, amount) => {
         try {
-            console.log('Saving parking data to database');
             const createdAt = new Date().toISOString();
 
             const task = {
                 createdAt,
-                locationName: location.locationName,
-                latitude: location.latitude,
-                longitude: location.longitude,
+                locationName: selectedLocationName,
+                latitude: selectedLatitude,
+                longitude: selectedLongitude,
                 amount,
                 startTime: new Date(startTime).toISOString(),
                 endTime: new Date(endTime).toISOString(),
             };
-
-            console.log('Task to be saved:', task); // Debugging statement
-
             await createParkingHistory(task);
 
             console.log('Parking data saved successfully');
@@ -209,8 +184,19 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
                                 setSearchQuery(text);
                                 fetchSuggestions(text);
                             }}
+                            onChangeText={(text) => {
+                                setSearchQuery(text);
+                                fetchSuggestions(text);
+                            }}
                         />
                         <Text style={styles.modalText}>Search</Text>
+                        <ScrollView style={styles.resultsContainer} contentContainerStyle={styles.scrollContent}>
+                            {suggestions.map((suggestion) => (
+                                <TouchableOpacity key={suggestion.placeId} style={styles.suggestionItem} onPress={() => handleSuggestionPress(suggestion)}>
+                                    <Text style={styles.suggestionText}>{suggestion.description}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
                         <ScrollView style={styles.resultsContainer} contentContainerStyle={styles.scrollContent}>
                             {suggestions.map((suggestion) => (
                                 <TouchableOpacity key={suggestion.placeId} style={styles.suggestionItem} onPress={() => handleSuggestionPress(suggestion)}>
@@ -300,7 +286,7 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
                 return (
                     <View style={styles.modalContent}>
                         <Text style={styles.modalText}>Parking Timer</Text>
-                        <Text style={styles.timerText}>{new Date(timer * 1000).toISOString().substr(11, 8)}</Text>
+                        <Text style={styles.timerText}>{new Date(timer * 1000).toISOString().substr(11, 8)}</Text> 
                         <TouchableOpacity style={styles.endParkingButton} onPress={handleEndParkingPress}>
                             <Text style={styles.endParkingButtonText}>End Parking</Text>
                         </TouchableOpacity>
@@ -310,7 +296,7 @@ const ModalContent = ({ modalContent, searchQuery, setSearchQuery, setSelectedLo
                 return (
                     <View style={styles.modalContent}>
                         <Text style={styles.modalText}>Price: {totalAmount} </Text>
-                        <Text style={styles.timerText}>{new Date(timer * 1000).toISOString().substr(11, 8)}</Text>
+                        <Text style={styles.timerText}>{new Date(timer * 1000).toISOString().substr(11, 8)}</Text> 
                         <Image source={require('../assets/car.png')} style={{ width: 200, height: 200, alignSelf: "center" }} />
                         <TouchableOpacity style={styles.endParkingButton} onPress={handleCloseParkingPress}>
                             <Text style={styles.endParkingButtonText}>Close</Text>
